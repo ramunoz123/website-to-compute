@@ -1,56 +1,165 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <!-- 
-      This is an HTML comment
-      You can write text in a comment and the content won't be visible in the page
-    -->
-
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="icon" href="https://glitch.com/favicon.ico" />
-
-  <!--
-      This is the page head - it contains info the browser uses
-      Like the title, which appears on the browser tab but not inside the page
-      Further down you'll see the content that displays in the page
-    -->
-  <title>Hello World!</title>
-
-  <!-- The website stylesheet -->
-  <link rel="stylesheet" href="/style.css" />
-
-  <!-- The website JavaScript file -->
-  <script src="/script.js" defer></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Apartment Heat Status</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-
 <body>
-  <!--
-      The body includes the content you see in the page
-      Each element is defined using tags, like this <div></div>
-      The attributes like class="wrapper" let us style elements in the CSS
-    -->
-  <div class="wrapper">
-    <div class="content" role="main">
-      <h1 class="title">Oh hi website!</h1>
-      <img src="/cool-website.svg" class="illustration" alt="cool website" />
-      <div class="instructions">
-        <p>
-          Fork <a href="https://github.com/glitchdotcom/website-to-compute">this project</a> and open it in a GitHub Codespace.
-        </p>
-        <p> Follow the steps in the README to deploy your new website to Fastly in a few steps!
-        </p>
+  <div id="root"></div>
+  
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { createClient } = supabase;
+    
+    // Initialize Supabase client
+    const supabaseClient = createClient(
+      'https://zaztkzezfcfoppqyhmlh.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InphenRremV6ZmNmb3BwcXlobWxoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcxMjY5NDgsImV4cCI6MjA4MjcwMjk0OH0.hTe6MlcDzXvVRenBDCN2mgUW-Qxa9wS8e4RdumvBNrc'
+    );
+    
+    // Lucide icons as inline SVG components
+    const Flame = () => (
+      <svg width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>
+      </svg>
+    );
+    
+    const Wind = () => (
+      <svg width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2"/>
+        <path d="M9.6 4.6A2 2 0 1 1 11 8H2"/>
+        <path d="M12.6 19.4A2 2 0 1 0 14 16H2"/>
+      </svg>
+    );
 
-      </div>
+    function HeatStatusTracker() {
+      const [isHeatOn, setIsHeatOn] = useState(false);
+      const [isLoading, setIsLoading] = useState(true);
+      const [error, setError] = useState(null);
 
-      <footer class="footer">
-        <div>
-          <a class="remix" href="https://github.com/glitchdotcom/website-to-compute">🚧 Get your own site</a>
+      useEffect(() => {
+        loadStatus();
+        
+        // Subscribe to real-time changes
+        const subscription = supabaseClient
+          .channel('heat_status_changes')
+          .on('postgres_changes', 
+            { event: '*', schema: 'public', table: 'heat_status' },
+            (payload) => {
+              setIsHeatOn(payload.new.is_on);
+            }
+          )
+          .subscribe();
+
+        return () => {
+          subscription.unsubscribe();
+        };
+      }, []);
+
+      const loadStatus = async () => {
+        try {
+          const { data, error } = await supabaseClient
+            .from('heat_status')
+            .select('is_on')
+            .eq('id', 1)
+            .single();
+
+          if (error) throw error;
+          setIsHeatOn(data.is_on);
+        } catch (err) {
+          console.error('Error loading status:', err);
+          setError('Could not load heat status');
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      const toggleHeat = async () => {
+        const newStatus = !isHeatOn;
+        setIsHeatOn(newStatus);
+        
+        try {
+          const { error } = await supabaseClient
+            .from('heat_status')
+            .update({ is_on: newStatus, updated_at: new Date().toISOString() })
+            .eq('id', 1);
+
+          if (error) throw error;
+        } catch (err) {
+          console.error('Error updating status:', err);
+          setError('Could not update heat status');
+          setIsHeatOn(!newStatus); // Revert on error
+        }
+      };
+
+      if (isLoading) {
+        return (
+          <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
+            <div className="text-white text-xl">Loading...</div>
+          </div>
+        );
+      }
+
+      return (
+        <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full">
+            <h1 className="text-3xl font-bold text-center mb-8 text-slate-800">
+              Apartment Heat Status
+            </h1>
+            
+            {error && (
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 text-sm">
+                {error}
+              </div>
+            )}
+            
+            <div className="flex flex-col items-center space-y-6">
+              <div className={`w-48 h-48 rounded-full flex items-center justify-center transition-all duration-300 ${
+                isHeatOn 
+                  ? 'bg-gradient-to-br from-orange-400 to-red-500 shadow-lg shadow-orange-300' 
+                  : 'bg-gradient-to-br from-blue-400 to-cyan-500 shadow-lg shadow-blue-300'
+              }`}>
+                <div className="text-white">
+                  {isHeatOn ? <Flame /> : <Wind />}
+                </div>
+              </div>
+              
+              <div className="text-center">
+                <p className="text-gray-600 text-lg mb-2">Heat is currently:</p>
+                <p className={`text-4xl font-bold ${
+                  isHeatOn ? 'text-orange-500' : 'text-blue-500'
+                }`}>
+                  {isHeatOn ? 'ON' : 'OFF'}
+                </p>
+              </div>
+              
+              <button
+                onClick={toggleHeat}
+                className={`px-8 py-4 rounded-full text-white font-semibold text-lg transition-all duration-200 transform hover:scale-105 active:scale-95 shadow-lg ${
+                  isHeatOn
+                    ? 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600'
+                    : 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600'
+                }`}
+              >
+                Turn Heat {isHeatOn ? 'OFF' : 'ON'}
+              </button>
+              
+              <p className="text-sm text-gray-500 text-center mt-4">
+                Status syncs in real-time between roommates!
+              </p>
+            </div>
+          </div>
         </div>
-      </footer>
-    </div>
-  </div>
-</body>
+      );
+    }
 
+    ReactDOM.render(<HeatStatusTracker />, document.getElementById('root'));
+  </script>
+</body>
 </html>
