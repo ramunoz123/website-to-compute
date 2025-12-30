@@ -17,7 +17,6 @@
     const { useState, useEffect } = React;
     const { createClient } = supabase;
     
-    // Initialize Supabase client
     const supabaseClient = createClient(
       'https://zaztkzezfcfoppqyhmlh.supabase.co',
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InphenRremV6ZmNmb3BwcXlobWxoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcxMjY5NDgsImV4cCI6MjA4MjcwMjk0OH0.hTe6MlcDzXvVRenBDCN2mgUW-Qxa9wS8e4RdumvBNrc'
@@ -32,7 +31,6 @@
       useEffect(() => {
         loadStatus();
         
-        // Subscribe to real-time changes
         const subscription = supabaseClient
           .channel('heat_status_changes')
           .on('postgres_changes', 
@@ -90,88 +88,95 @@
 
       const formatTimestamp = (timestamp) => {
         if (!timestamp) return 'Never';
-        
-        // Parse the timestamp and explicitly handle it as UTC
-        const date = new Date(timestamp + 'Z'); // Add Z to ensure it's treated as UTC
-        
-        // Format for EST/EDT
-        const formatter = new Intl.DateTimeFormat('en-US', {
+        const date = new Date(timestamp);
+        return date.toLocaleString('en-US', {
           timeZone: 'America/New_York',
           month: 'short',
           day: 'numeric',
           hour: 'numeric',
           minute: '2-digit',
           hour12: true
-        });
-        
-        return formatter.format(date) + ' EST';
+        }) + ' EST';
       };
 
       if (isLoading) {
         return (
-          <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
-            <div className="text-white text-xl">Loading...</div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: 'linear-gradient(to bottom right, #0f172a, #1e293b)' }}>
+            <div style={{ color: 'white', fontSize: '1.25rem' }}>Loading...</div>
           </div>
         );
       }
 
       return (
-        <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 p-4">
-          <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full">
-            <h1 className="text-3xl font-bold text-center mb-8 text-slate-800">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: 'linear-gradient(to bottom right, #0f172a, #1e293b)', padding: '1rem' }}>
+          <div style={{ background: 'white', borderRadius: '1.5rem', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', padding: '2rem', maxWidth: '28rem', width: '100%' }}>
+            <h1 style={{ fontSize: '1.875rem', fontWeight: 'bold', textAlign: 'center', marginBottom: '2rem', color: '#1e293b' }}>
               Apartment Heat Status
             </h1>
             
             {error && (
-              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 text-sm">
+              <div style={{ background: '#fee2e2', border: '1px solid #f87171', color: '#991b1b', padding: '1rem', borderRadius: '0.375rem', marginBottom: '1rem', fontSize: '0.875rem' }}>
                 {error}
               </div>
             )}
             
-            <div className="flex flex-col items-center space-y-6">
-              <div className={`w-48 h-48 rounded-full flex items-center justify-center transition-all duration-300 ${
-                isHeatOn 
-                  ? 'bg-gradient-to-br from-orange-400 to-red-500 shadow-lg shadow-orange-300' 
-                  : 'bg-gradient-to-br from-blue-400 to-cyan-500 shadow-lg shadow-blue-300'
-              }`}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem' }}>
+              <div style={{
+                width: '12rem',
+                height: '12rem',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: isHeatOn ? 'linear-gradient(to bottom right, #fb923c, #ef4444)' : 'linear-gradient(to bottom right, #60a5fa, #06b6d4)',
+                boxShadow: isHeatOn ? '0 10px 15px -3px rgba(251, 146, 60, 0.3)' : '0 10px 15px -3px rgba(96, 165, 250, 0.3)',
+                transition: 'all 0.3s'
+              }}>
                 <img 
                   src={isHeatOn 
                     ? 'https://cdn.wikirby.com/a/af/KRtDLD_Monster_Flame.png'
                     : 'https://cdn.wikirby.com/d/d5/KRtDLD_Snow_Bowl.png'
                   }
                   alt={isHeatOn ? 'Fire Kirby' : 'Ice Kirby'}
-                  className="w-32 h-32 object-contain"
+                  style={{ width: '8rem', height: '8rem', objectFit: 'contain' }}
                 />
               </div>
               
-              <div className="text-center">
-                <p className="text-gray-600 text-lg mb-2">Heat is currently:</p>
-                <p className={`text-4xl font-bold ${
-                  isHeatOn ? 'text-orange-500' : 'text-blue-500'
-                }`}>
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ color: '#4b5563', fontSize: '1.125rem', marginBottom: '0.5rem' }}>Heat is currently:</p>
+                <p style={{ fontSize: '2.25rem', fontWeight: 'bold', color: isHeatOn ? '#f97316' : '#3b82f6' }}>
                   {isHeatOn ? 'ON' : 'OFF'}
                 </p>
               </div>
               
-              <div className="text-center">
-                <p className="text-gray-500 text-sm">Last changed:</p>
-                <p className="text-gray-700 text-base font-medium">
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>Last changed:</p>
+                <p style={{ color: '#374151', fontSize: '1rem', fontWeight: '500' }}>
                   {formatTimestamp(lastUpdated)}
                 </p>
               </div>
               
               <button
                 onClick={toggleHeat}
-                className={`px-8 py-4 rounded-full text-white font-semibold text-lg transition-all duration-200 transform hover:scale-105 active:scale-95 shadow-lg ${
-                  isHeatOn
-                    ? 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600'
-                    : 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600'
-                }`}
+                style={{
+                  padding: '1rem 2rem',
+                  borderRadius: '9999px',
+                  color: 'white',
+                  fontWeight: '600',
+                  fontSize: '1.125rem',
+                  background: isHeatOn ? 'linear-gradient(to right, #3b82f6, #06b6d4)' : 'linear-gradient(to right, #f97316, #ef4444)',
+                  border: 'none',
+                  cursor: 'pointer',
+                  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                  transition: 'transform 0.2s'
+                }}
+                onMouseEnter={(e) => e.target.style.transform = 'scale(1.05)'}
+                onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
               >
                 Turn Heat {isHeatOn ? 'OFF' : 'ON'}
               </button>
               
-              <p className="text-sm text-gray-500 text-center mt-4">
+              <p style={{ fontSize: '0.875rem', color: '#6b7280', textAlign: 'center', marginTop: '1rem' }}>
                 Status syncs in real-time between roommates!
               </p>
             </div>
@@ -180,7 +185,7 @@
       );
     }
 
-    ReactDOM.render(<HeatStatusTracker />, document.getElementById('root'));
+    ReactDOM.render(React.createElement(HeatStatusTracker), document.getElementById('root'));
   </script>
 </body>
 </html>
