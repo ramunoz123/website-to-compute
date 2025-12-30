@@ -40,6 +40,7 @@
 
     function HeatStatusTracker() {
       const [isHeatOn, setIsHeatOn] = useState(false);
+      const [lastUpdated, setLastUpdated] = useState(null);
       const [isLoading, setIsLoading] = useState(true);
       const [error, setError] = useState(null);
 
@@ -53,6 +54,7 @@
             { event: '*', schema: 'public', table: 'heat_status' },
             (payload) => {
               setIsHeatOn(payload.new.is_on);
+              setLastUpdated(payload.new.updated_at);
             }
           )
           .subscribe();
@@ -66,12 +68,13 @@
         try {
           const { data, error } = await supabaseClient
             .from('heat_status')
-            .select('is_on')
+            .select('is_on, updated_at')
             .eq('id', 1)
             .single();
 
           if (error) throw error;
           setIsHeatOn(data.is_on);
+          setLastUpdated(data.updated_at);
         } catch (err) {
           console.error('Error loading status:', err);
           setError('Could not load heat status');
@@ -82,12 +85,14 @@
 
       const toggleHeat = async () => {
         const newStatus = !isHeatOn;
+        const now = new Date().toISOString();
         setIsHeatOn(newStatus);
+        setLastUpdated(now);
         
         try {
           const { error } = await supabaseClient
             .from('heat_status')
-            .update({ is_on: newStatus, updated_at: new Date().toISOString() })
+            .update({ is_on: newStatus, updated_at: now })
             .eq('id', 1);
 
           if (error) throw error;
@@ -96,6 +101,19 @@
           setError('Could not update heat status');
           setIsHeatOn(!newStatus); // Revert on error
         }
+      };
+
+      const formatTimestamp = (timestamp) => {
+        if (!timestamp) return 'Never';
+        const date = new Date(timestamp);
+        return date.toLocaleString('en-US', {
+          timeZone: 'America/New_York',
+          month: 'short',
+          day: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        }) + ' EST';
       };
 
       if (isLoading) {
@@ -136,6 +154,13 @@
                   isHeatOn ? 'text-orange-500' : 'text-blue-500'
                 }`}>
                   {isHeatOn ? 'ON' : 'OFF'}
+                </p>
+              </div>
+              
+              <div className="text-center">
+                <p className="text-gray-500 text-sm">Last changed:</p>
+                <p className="text-gray-700 text-base font-medium">
+                  {formatTimestamp(lastUpdated)}
                 </p>
               </div>
               
